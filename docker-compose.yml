@@ -1,0 +1,48 @@
+version: "3.1"
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/logs:/var/log/nginx
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - jenkins-nginx
+
+  jenkins-docker:
+    image: docker:dind
+    ports:
+      - 2376:2376
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-data:/var/jenkins_home
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    networks:
+      jenkins-nginx:
+        aliases:
+          - docker
+
+  jenkins:
+    build: ./jenkins
+    ports:
+      - 8080:8080
+      - 50000:50000
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - jenkins-docker-certs:/certs/client:ro
+    environment:
+      - DOCKER_HOST=tcp://docker:2376
+      - DOCKER_CERT_PATH=/certs/client
+      - DOCKER_TLS_VERIFY=1
+    networks:
+      - jenkins-nginx
+
+networks:
+  jenkins-nginx:
+
+volumes:
+  jenkins-data:
+  jenkins-docker-certs:
